@@ -1,0 +1,172 @@
+{
+  "name": "Conectar Número Whatsapp no Evolution API Docker",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://192.168.3.7:8080/instance/create",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "apikey",
+              "value": "mude-me"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"instanceName\": \"{{ $json.query.instance }}\",\n\t\"integration\": \"WHATSAPP-BAILEYS\",\n\t\"qrcode\": true,\n\t\"webhook\": {\n\t\t\"url\": \"http://192.168.3.2:5678/webhook/escutar-mensagem-whatsapp\",\n\t\t\"byEvents\": true,\n\t\t\"base64\": true,\n\t\t\"events\": [\n\t\t\t\"MESSAGES_UPSERT\"\n\t\t]\n\t}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -140,
+        -160
+      ],
+      "id": "f04de19f-a937-4dfc-9821-d43b5aa6dc53",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3e703c8c-efa1-47cb-bbfd-e0aee57dd4d7",
+              "name": "base64",
+              "value": "={{ $json.qrcode.base64.split('base64,')[1] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        60,
+        -220
+      ],
+      "id": "39b1c3d6-f0bb-4d78-921b-8e281884a136",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "base64",
+        "options": {
+          "fileName": "qrcode.png",
+          "mimeType": "image/png"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        260,
+        -220
+      ],
+      "id": "72693fbf-ae8f-4c22-885f-46d3e843a08a",
+      "name": "Convert to File1",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "respondWith": "binary",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.3,
+      "position": [
+        480,
+        -220
+      ],
+      "id": "bc2bd98c-e6af-4b83-bdc3-7f8ab2c680f3",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "path": "qrcode",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -380,
+        -300
+      ],
+      "id": "f9e4a584-85ba-445d-8dea-c2cf46fbe4ee",
+      "name": "Webhook",
+      "webhookId": "a34048d1-3de4-4749-8dc3-988ba6710900"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Convert to File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        [],
+        []
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "eb347edd-fde3-4dd7-9bf9-a24932a4e7d7",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "02cf3d77e9a5d0dd0887f9a1fdef187a1f9c2229eacc7ced4e52fb2b1cfc9dc7"
+  },
+  "id": "9WXWWDM00VeNeMUq",
+  "tags": []
+}

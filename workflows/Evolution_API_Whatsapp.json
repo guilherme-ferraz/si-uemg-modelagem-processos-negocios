@@ -1,0 +1,313 @@
+{
+  "name": "Evolution API Whatsapp",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "escutar-mensagem-whatsapp/messages-upsert",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1000,
+        -180
+      ],
+      "id": "56ff0161-dcf0-4cf6-8731-2615bf1921aa",
+      "name": "Webhook",
+      "webhookId": "b4671d09-b7b1-4350-8bba-223834fa6aaa"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3c7ec2a9-da91-4d8d-bcb8-55977cf663df",
+              "name": "body",
+              "value": "={{ $json.body }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -760,
+        -180
+      ],
+      "id": "ee297e94-5afe-47ca-bc30-874cc9111591",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "model": "gemma2-9b-it",
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        40
+      ],
+      "id": "2dbc0e9d-d1d0-4958-9c65-d0266a7cf48a",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "3r8Fs0SFPFUIIKx6",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.data.message.conversation }}",
+        "options": {
+          "systemMessage": "=Você é um assistente de estoque de compras domésticas e deve fazer pesquisas na minha base sql para responder minhas dúvidas sobre minhas compras no mercado.\nVocê precisa das seguintes informações adicionais:\nData atual: {{ $now }}\nEsquema da tabela lista_vazia: id INT (auto incremento), item VARCHAR (not null)"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -560,
+        -180
+      ],
+      "id": "7f0ebc7a-63f9-4cc6-bf6b-3c7ead736a8d",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').item.json.body.data.key.remoteJid }}",
+        "sessionTTL": 3600,
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryRedisChat",
+      "typeVersion": 1.5,
+      "position": [
+        -500,
+        80
+      ],
+      "id": "983182f3-3020-4ea8-ac87-87f0899f4bfb",
+      "name": "Redis Chat Memory",
+      "credentials": {
+        "redis": {
+          "id": "6ixKPbBi3hod50bj",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "table": {
+          "__rl": true,
+          "value": "lista_compras",
+          "mode": "list",
+          "cachedResultName": "lista_compras"
+        },
+        "returnAll": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Return_All', ``, 'boolean') }}",
+        "options": {
+          "connectionTimeoutMillis": 30,
+          "connectionLimit": 10,
+          "queryBatching": "single"
+        }
+      },
+      "type": "n8n-nodes-base.mySqlTool",
+      "typeVersion": 2.4,
+      "position": [
+        -340,
+        80
+      ],
+      "id": "9bbff007-e898-40b4-8d14-01a91a841ed4",
+      "name": "MySQL",
+      "credentials": {
+        "mySql": {
+          "id": "ovr8rkik8Z1Fq6dU",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "chat-api",
+        "operation": "read-messages",
+        "instanceName": "={{ $('Edit Fields').item.json.body.instance }}",
+        "remoteJid": "={{ $('Edit Fields').item.json.body.data.key.remoteJid }}",
+        "messageId": "={{ $('Webhook').item.json.body.data.key.id }}"
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        -140,
+        -180
+      ],
+      "id": "09b720c1-506d-480f-ad9f-f8fdb5917156",
+      "name": "Evolution API",
+      "credentials": {
+        "evolutionApi": {
+          "id": "tQdAtMwbloM5PoOu",
+          "name": "Evolution account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "={{ $('Edit Fields').item.json.body.instance }}",
+        "remoteJid": "={{ $('Edit Fields').item.json.body.data.key.remoteJid }}",
+        "messageText": "={{ $('AI Agent').item.json.output }}",
+        "options_message": {
+          "delay": 2000
+        }
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        140,
+        -180
+      ],
+      "id": "8f5c4873-1262-4d53-a35f-9f6903dcb79b",
+      "name": "Evolution API1",
+      "credentials": {
+        "evolutionApi": {
+          "id": "tQdAtMwbloM5PoOu",
+          "name": "Evolution account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Insert rows in a table in MySQL",
+        "table": {
+          "__rl": true,
+          "value": "lista_vazia",
+          "mode": "list",
+          "cachedResultName": "lista_vazia"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySqlTool",
+      "typeVersion": 2.4,
+      "position": [
+        -200,
+        80
+      ],
+      "id": "773b8705-0a37-43da-beeb-ced9caee109d",
+      "name": "MySQL1",
+      "credentials": {
+        "mySql": {
+          "id": "ovr8rkik8Z1Fq6dU",
+          "name": "MySQL account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Evolution API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evolution API": {
+      "main": [
+        [
+          {
+            "node": "Evolution API1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8405a5a2-a78f-4351-bd51-dca287fbe05c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "02cf3d77e9a5d0dd0887f9a1fdef187a1f9c2229eacc7ced4e52fb2b1cfc9dc7"
+  },
+  "id": "5pZe2Fb6Ax5CtajB",
+  "tags": []
+}
